@@ -8,6 +8,8 @@ import net.leaderos.auth.bungee.helpers.DebugBungee;
 import net.leaderos.auth.bungee.listener.PlayerListener;
 import net.leaderos.auth.bungee.listener.PluginMessageListener;
 import net.leaderos.auth.shared.Shared;
+import net.leaderos.auth.shared.helpers.Placeholder;
+import net.leaderos.auth.shared.helpers.PluginUpdater;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.plugin.Plugin;
 import org.bstats.bungeecord.Metrics;
@@ -57,6 +59,17 @@ public class Bungee extends Plugin {
         } catch (Exception exception) {
             getLogger().log(Level.WARNING, "ErrorCode loading config.yml", exception);
         }
+    }
+
+    public void checkUpdate() {
+        Bungee.getInstance().getProxy().getScheduler().runAsync(Bungee.getInstance(), () -> {
+            PluginUpdater updater = new PluginUpdater(getDescription().getVersion());
+            try {
+                if (updater.checkForUpdates()) {
+                    getLogger().log(Level.WARNING, "There is a new update available for LeaderOS Auth Plugin! Please update to " + updater.getLatestVersion());
+                }
+            } catch (Exception ignored) {}
+        });
     }
 
 }

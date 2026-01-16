@@ -35,6 +35,8 @@ public class en extends Language {
         @Comment("Prefix of messages")
         private String prefix = "&3LeaderOS-Auth &8»";
 
+        private String update = "{prefix} &eThere is a new update available for LeaderOS Auth Plugin! Please update to &a%version%";
+
         private String wait = "{prefix} &cYou are sending commands too quickly. Please wait a moment.";
 
         private String anErrorOccurred = "{prefix} &cAn error occurred while processing your request. Please try again later.";

@@ -34,6 +34,8 @@ public class tr extends Language {
 
         private String prefix = "&3LeaderOS-Auth &8»";
 
+        private String update = "{prefix} &eLeaderOS Auth plugini için yeni bir güncelleme mevcut! Lütfen &a%version% &eversiyonuna güncelleyin!";
+
         private String wait = "{prefix} &cÇok hızlı komut gönderiyorsunuz. Lütfen bir saniye bekleyin.";
 
         private String anErrorOccurred = "{prefix} &cİsteğiniz işlenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.";

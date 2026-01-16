@@ -23,9 +23,13 @@ import net.elytrium.limboapi.api.command.LimboCommandMeta;
 import net.elytrium.limboapi.api.file.BuiltInWorldFileType;
 import net.elytrium.limboapi.api.file.WorldFile;
 import net.elytrium.limboapi.api.player.GameMode;
+import net.kyori.adventure.text.Component;
+import net.leaderos.auth.shared.helpers.Placeholder;
+import net.leaderos.auth.shared.helpers.PluginUpdater;
 import net.leaderos.auth.velocity.commands.LeaderOSCommand;
 import net.leaderos.auth.velocity.configuration.Config;
 import net.leaderos.auth.velocity.configuration.Language;
+import net.leaderos.auth.velocity.helpers.ChatUtil;
 import net.leaderos.auth.velocity.helpers.DebugVelocity;
 import net.leaderos.auth.velocity.listener.ConnectionListener;
 import net.leaderos.auth.shared.Shared;
@@ -46,7 +50,7 @@ import java.util.Collections;
 @Plugin(
         id = "leaderosauth",
         name = "LeaderOS-Auth",
-        version = "1.0.4",
+        version = "1.0.5",
         url = "https://leaderos.net",
         description = "LeaderOS Auth for Velocity",
         authors = {"leaderos", "efekurbann"},
@@ -233,5 +237,20 @@ public class Velocity {
         for (String command : this.configFile.getSettings().getTfaCommands()) {
             limboServer.registerCommand(new LimboCommandMeta(Collections.singleton(command)));
         }
+    }
+
+    public void checkUpdate() {
+        Velocity.getInstance().getServer().getScheduler().buildTask(Velocity.getInstance(), () -> {
+            PluginUpdater updater = new PluginUpdater("1.0.5");
+            try {
+                if (updater.checkForUpdates()) {
+                    Component msg = ChatUtil.replacePlaceholders(
+                            Velocity.getInstance().getLangFile().getMessages().getUpdate(),
+                            new Placeholder("%version%", updater.getLatestVersion())
+                    );
+                    ChatUtil.sendMessage(getServer().getConsoleCommandSource(), msg);
+                }
+            } catch (Exception ignored) {}
+        }).schedule();
     }
 }

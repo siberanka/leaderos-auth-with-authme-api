@@ -23,6 +23,8 @@ import net.leaderos.auth.bukkit.helpers.DebugBukkit;
 import net.leaderos.auth.bukkit.listener.*;
 import net.leaderos.auth.shared.Shared;
 import net.leaderos.auth.shared.enums.SessionState;
+import net.leaderos.auth.shared.helpers.Placeholder;
+import net.leaderos.auth.shared.helpers.PluginUpdater;
 import net.leaderos.auth.shared.helpers.UrlUtil;
 import net.leaderos.auth.shared.model.response.GameSessionResponse;
 import org.bstats.bukkit.Metrics;
@@ -218,6 +220,21 @@ public class Bukkit extends JavaPlugin {
         } catch (ClassNotFoundException e) {
             return false;
         }
+    }
+
+    public void checkUpdate() {
+        foliaLib.getScheduler().runAsync((task) -> {
+            PluginUpdater updater = new PluginUpdater(getDescription().getVersion());
+            try {
+                if (updater.checkForUpdates()) {
+                    String msg = ChatUtil.replacePlaceholders(
+                            Bukkit.getInstance().getLangFile().getMessages().getUpdate(),
+                            new Placeholder("%version%", updater.getLatestVersion())
+                    );
+                    ChatUtil.sendMessage(org.bukkit.Bukkit.getConsoleSender(), msg);
+                }
+            } catch (Exception ignored) {}
+        });
     }
 
 }
