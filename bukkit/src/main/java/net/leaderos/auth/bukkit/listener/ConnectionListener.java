@@ -127,6 +127,7 @@ public class ConnectionListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
+        plugin.getAuthMeCompatBridge().broadcastUnauthenticated(player);
         plugin.getSessions().remove(player.getName());
 
         // Clear title

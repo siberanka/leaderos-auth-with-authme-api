@@ -4,3 +4,5 @@ main: net.leaderos.auth.bukkit.Bukkit
 version: "${shared.version}"
 api-version: 1.13
 folia-supported: true
+softdepend: [ AuthMe ]
+provides: [ AuthMe ]

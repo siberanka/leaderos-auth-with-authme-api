@@ -52,6 +52,7 @@ public class JoinListener implements Listener {
             // No need for a isSession check here, as we handle it in the ConnectionListener
             if (session.isAuthenticated()) {
                 ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getLogin().getSuccess());
+                plugin.getAuthMeCompatBridge().callLogin(player);
                 plugin.getFoliaLib().getScheduler().runLater(() -> {
                     plugin.sendStatus(player, true);
                 }, 5);
@@ -165,6 +166,9 @@ public class JoinListener implements Listener {
 
             plugin.getFoliaLib().getScheduler().runLater(() -> {
                 plugin.sendStatus(player, session.isAuthenticated());
+                if (!session.isAuthenticated()) {
+                    plugin.getAuthMeCompatBridge().broadcastUnauthenticated(player);
+                }
             }, 5);
         } catch (Exception e) {
             Shared.getDebugAPI().send("ErrorCode PlayerJoinEvent for " + player.getName() + ": " + e.getMessage(), true);
