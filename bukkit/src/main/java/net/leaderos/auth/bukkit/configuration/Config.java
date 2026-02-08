@@ -167,5 +167,91 @@ public class Config extends OkaeriConfig {
 
         @Comment("Blacklist of passwords that cannot be used")
         private List<String> unsafePasswords = Lists.newArrayList("123456", "password", "qwerty", "123456789", "help", "sifre", "12345", "asd123", "qwe123");
+
+        @Comment("AltDetector settings")
+        private AltDetector altDetector = new AltDetector();
+
+        @Getter
+        @Setter
+        public static class AltDetector extends OkaeriConfig {
+            @Comment("Enable AltDetector module")
+            private boolean enabled = true;
+
+            @Comment("How many days account/IP history is kept")
+            private int expirationTime = 60;
+
+            @Comment("Database type. Available: sqlite, mysql")
+            private String databaseType = "sqlite";
+
+            @Comment("MySQL settings")
+            private Mysql mysql = new Mysql();
+
+            @Getter
+            @Setter
+            public static class Mysql extends OkaeriConfig {
+                private String hostname = "127.0.0.1";
+                private String username = "username";
+                private String password = "password";
+                private String database = "databasename";
+                private String prefix = "altdetector_";
+                private int port = 3306;
+                private String jdbcurlProperties = "";
+            }
+
+            @Comment("Data migration source. Available: none, yml, sqlite, mysql")
+            private String convertFrom = "none";
+
+            @Comment("Print SQL statements")
+            private boolean sqlDebug = false;
+
+            @Comment("Join notify format")
+            private String joinPlayerPrefix = "&b[AltDetector] ";
+            private String joinPlayer = "{0} may be an alt of ";
+            private String joinPlayerList = "{0}";
+            private String joinPlayerSeparator = ", ";
+
+            @Comment("/alt command format")
+            private String altcmdPlayer = "&c{0}&6 may be an alt of ";
+            private String altcmdPlayerList = "&c{0}";
+            private String altcmdPlayerSeparator = "&6, ";
+            private String altcmdPlayernoalts = "&c{0}&6 has no known alts";
+            private String altcmdNoalts = "&6No alts found";
+            private String altcmdPlayernotfound = "&4{0} not found";
+            private String altcmdParamerror = "&4Must specify at most one player";
+            private String altcmdNoperm = "&4You do not have permission for this command";
+            private String delcmdRemovedsingular = "&6{0} record removed";
+            private String delcmdRemovedplural = "&6{0} records removed";
+
+            @Comment("PlaceholderAPI settings")
+            private boolean placeholderEnabled = true;
+            private String placeholderSeparator = " ";
+
+            @Comment("Discord webhook settings")
+            private Discord discord = new Discord();
+
+            @Getter
+            @Setter
+            public static class Discord extends OkaeriConfig {
+                private boolean enabled = false;
+                private String webhookUrl = "";
+                private String username = "AltDetector";
+                private String mcServerName = "Minecraft Server";
+                private String avatarUrl = "https://minotar.net/helm/{creator}/100.png";
+                private String embedTitle = "Alt Account Detection - {creator}";
+                private String embedDescription = "`{content}`";
+                private String embedThumbnailUrl = "";
+                private int embedColor = 0xff0000;
+            }
+
+            @Comment("Block new register when too many accounts exist in IP history")
+            private RegisterLimit registerLimit = new RegisterLimit();
+
+            @Getter
+            @Setter
+            public static class RegisterLimit extends OkaeriConfig {
+                private boolean enabled = true;
+                private int maxAccountsPerIp = 3;
+            }
+        }
     }
 }

@@ -17,6 +17,7 @@ import net.leaderos.auth.bukkit.command.RegisterCommand;
 import net.leaderos.auth.bukkit.command.TfaCommand;
 import net.leaderos.auth.bukkit.configuration.Config;
 import net.leaderos.auth.bukkit.configuration.Language;
+import net.leaderos.auth.bukkit.altdetector.AltDetectorController;
 import net.leaderos.auth.bukkit.helpers.ChatUtil;
 import net.leaderos.auth.bukkit.helpers.ConsoleLogger;
 import net.leaderos.auth.bukkit.helpers.DebugBukkit;
@@ -63,6 +64,7 @@ public class Bukkit extends JavaPlugin {
     private final Map<String, GameSessionResponse> sessions = Maps.newHashMap();
     private AuthMeCompatBridge authMeCompatBridge;
     private AuthMePluginMessageListener authMePluginMessageListener;
+    private AltDetectorController altDetectorController;
 
     @Override
     public void onEnable() {
@@ -95,6 +97,11 @@ public class Bukkit extends JavaPlugin {
         authMeCompatBridge = new AuthMeCompatBridge(this);
         authMeCompatBridge.init();
 
+        if (getConfigFile().getSettings().getAltDetector().isEnabled()) {
+            altDetectorController = new AltDetectorController(this);
+            altDetectorController.enable();
+        }
+
         setupCommands();
 
         registerLoggerFilters(new ConsoleLogger());
@@ -123,6 +130,9 @@ public class Bukkit extends JavaPlugin {
             getServer().getMessenger().unregisterIncomingPluginChannel(this, "BungeeCord", authMePluginMessageListener);
         }
         getServer().getMessenger().unregisterOutgoingPluginChannel(this, "BungeeCord");
+        if (altDetectorController != null) {
+            altDetectorController.disable();
+        }
     }
 
     public void setupFiles() {
@@ -217,6 +227,9 @@ public class Bukkit extends JavaPlugin {
 
         sendStatus(player, true);
         authMeCompatBridge.callLogin(player);
+        if (altDetectorController != null) {
+            altDetectorController.processAuthenticatedPlayer(player);
+        }
     }
 
     public void forceUnauthenticate(Player player) {

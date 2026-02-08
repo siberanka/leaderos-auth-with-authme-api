@@ -4,5 +4,29 @@ main: net.leaderos.auth.bukkit.Bukkit
 version: "${shared.version}"
 api-version: 1.13
 folia-supported: true
-softdepend: [ AuthMe ]
+softdepend: [ AuthMe, PlaceholderAPI, PremiumVanish, SuperVanish ]
 provides: [ AuthMe ]
+commands:
+  alt:
+    description: Lists possible alt accounts of player.
+    permission: altdetector.alt
+    usage: "/alt [player]"
+permissions:
+  altdetector.alt:
+    description: Allows use of the /alt command
+    default: op
+  altdetector.alt.delete:
+    description: Allows use of the /alt delete command
+    default: op
+  altdetector.alt.seevanished:
+    description: Allows this player to use /alt command to see vanished players
+    default: op
+  altdetector.exempt:
+    description: Exempts player from data being saved and lookup checks
+    default: false
+  altdetector.notify:
+    description: Notifies this player when an alt is detected
+    default: op
+  altdetector.notify.seevanished:
+    description: Notifies this player when an alt is detected for a vanished player
+    default: op

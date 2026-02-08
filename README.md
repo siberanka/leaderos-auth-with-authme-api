@@ -1,58 +1,64 @@
-# minecraft-leaderos-auth
-Minecraft plugin for in-game authentication integrated with LeaderOS.
+# LeaderOS Auth (Fork)
 
-## Son Değişiklikler (TR)
+Minecraft auth plugin integrated with LeaderOS (Bukkit, Bungee, Velocity).
 
-Bu güncelleme ile Bukkit modülüne AuthMe uyumluluk katmanı eklendi.
+## Version
 
-- AuthMe uyumlu event sınıfları eklendi:
-  - `fr.xephi.authme.events.LoginEvent`
-  - `fr.xephi.authme.events.RegisterEvent`
-  - `fr.xephi.authme.events.LogoutEvent`
-  - `fr.xephi.authme.events.FailedLoginEvent`
-  - `fr.xephi.authme.events.AuthMeAsyncPreLoginEvent`
-  - `fr.xephi.authme.events.AuthMeAsyncPreRegisterEvent`
-- AuthMe API uyumluluğu için minimal `fr.xephi.authme.api.v3.AuthMeApi` eklendi.
-- Bukkit akışına AuthMe köprüsü eklendi:
-  - Login/Register öncesi pre-event tetikleme
-  - Başarılı login/register/TFA sonrası AuthMe-style login event tetikleme
-  - Başarısız parola girişinde failed-login event tetikleme
-  - Quit/unauthenticated durumlarında logout/unauth mesajı yayınlama
-- Plugin mesajlaşma tarafında AuthMe kanalları desteklendi:
-  - `AuthMe.v2.Broadcast` üzerinden `login` / `logout` yayınları
-  - `AuthMe.v2` üzerinden `perform.login` alımı ve oyuncuyu doğrulama
-- Mevcut haberleşme sistemi korunmuştur:
-  - `BungeeCord` + `losauth:status` akışı kaldırılmadı, devam ediyor.
-- `plugin.yml` güncellendi:
-  - `softdepend: [ AuthMe ]`
-  - `provides: [ AuthMe ]`
+- Current fork version: `1.0.6-fork`
 
-Not: Bu değişiklikler sadece Bukkit tarafına ekleme/uyumluluk amaçlıdır; `bungee`, `shared` ve `velocity` modüllerinden özellik kaldırılmamıştır.
+## Bukkit (Current State)
 
-## Recent Changes (EN)
+### Auth Flow
 
-This update adds an AuthMe compatibility layer to the Bukkit module.
+- Login/register/TFA flow with LeaderOS API
+- Session support
+- Auth timeout, command cooldown, password policy
+- Optional spawn teleport and bossbar/title prompts
 
-- Added AuthMe-compatible event classes:
-  - `fr.xephi.authme.events.LoginEvent`
-  - `fr.xephi.authme.events.RegisterEvent`
-  - `fr.xephi.authme.events.LogoutEvent`
-  - `fr.xephi.authme.events.FailedLoginEvent`
-  - `fr.xephi.authme.events.AuthMeAsyncPreLoginEvent`
-  - `fr.xephi.authme.events.AuthMeAsyncPreRegisterEvent`
-- Added a minimal `fr.xephi.authme.api.v3.AuthMeApi` for API compatibility.
-- Added an AuthMe bridge in Bukkit flow:
-  - Pre-events before login/register
-  - AuthMe-style login event after successful login/register/TFA
-  - Failed-login event on wrong password
-  - Logout/unauthenticated broadcast on quit and unauth states
-- Added AuthMe plugin messaging channel support:
-  - `login` / `logout` broadcasts over `AuthMe.v2.Broadcast`
-  - `perform.login` handling over `AuthMe.v2` to authenticate player
-- Existing communication was preserved:
-  - `BungeeCord` + `losauth:status` flow is still active.
-- Updated `plugin.yml`:
-  - `softdepend: [ AuthMe ]`
-  - `provides: [ AuthMe ]`
+### AuthMe Compatibility
 
-Note: These are additive compatibility changes only on Bukkit; no feature removal was made in `bungee`, `shared`, or `velocity` modules.
+- AuthMe-compatible events and API stubs are included
+- AuthMe plugin messaging support:
+  - `AuthMe.v2.Broadcast` (`login` / `logout`)
+  - `AuthMe.v2` (`perform.login`)
+- `plugin.yml`:
+  - `softdepend: [AuthMe, PlaceholderAPI, PremiumVanish, SuperVanish]`
+  - `provides: [AuthMe]`
+
+### AltDetector Integration
+
+AltDetector-leaderos modules are integrated into the Bukkit plugin:
+
+- Alt detection after successful auth (login/register/TFA)
+- SQL backend support:
+  - SQLite
+  - MySQL
+- Data expiration/purge support
+- Optional conversion setting (`none`, `yml`, `sqlite`, `mysql`)
+- `/alt` command support
+- PlaceholderAPI expansion support
+- Discord webhook notifications
+- Vanish integration support (PremiumVanish/SuperVanish)
+
+### New Register Limit (IP History)
+
+You can block new registration if IP history already has too many accounts.
+
+- Check is done before register API call
+- If account count in IP history is `>= limit`, registration is blocked
+- Limit is configurable and can be enabled/disabled via config
+
+Config path:
+
+- `settings.alt-detector.register-limit.enabled`
+- `settings.alt-detector.register-limit.max-accounts-per-ip`
+
+## Build
+
+```bash
+mvn -pl bukkit -am -DskipTests package
+```
+
+Output jar:
+
+- `bukkit/target/leaderos-auth-bukkit-1.0.6-fork-shaded.jar`

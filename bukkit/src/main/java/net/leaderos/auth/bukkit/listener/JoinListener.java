@@ -53,6 +53,9 @@ public class JoinListener implements Listener {
             if (session.isAuthenticated()) {
                 ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getLogin().getSuccess());
                 plugin.getAuthMeCompatBridge().callLogin(player);
+                if (plugin.getAltDetectorController() != null) {
+                    plugin.getAltDetectorController().processAuthenticatedPlayer(player);
+                }
                 plugin.getFoliaLib().getScheduler().runLater(() -> {
                     plugin.sendStatus(player, true);
                 }, 5);

@@ -100,61 +100,85 @@ public class RegisterCommand extends BaseCommand {
             }
 
             String email = secondArgType == RegisterSecondArg.EMAIL ? secondArg : null;
-            String userAgent = UserAgentUtil.generateUserAgent(!plugin.getConfigFile().getSettings().isSession());
-
-            AuthUtil.register(player.getName(), password, email, ip, userAgent).whenComplete((result, ex) -> {
-                plugin.getFoliaLib().getScheduler().runNextTick((task) -> {
-                    if (ex != null) {
-                        ex.printStackTrace();
-                        ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getAnErrorOccurred());
-                        return;
-                    }
-
-                    if (result.isStatus()) {
-                        // Kick the player if email verification is required
-                        if (result.isEmailVerificationRequired() && plugin.getConfigFile().getSettings().getEmailVerification().isKickAfterRegister()) {
-                            player.kickPlayer(String.join("\n",
-                                    ChatUtil.replacePlaceholders(plugin.getLangFile().getMessages().getKickEmailNotVerified(),
-                                            new Placeholder("{prefix}", plugin.getLangFile().getMessages().getPrefix()))
-                            ));
+            if (plugin.getAltDetectorController() != null) {
+                plugin.getAltDetectorController().canRegisterWithIp(ip).whenComplete((canRegister, ex) -> {
+                    plugin.getFoliaLib().getScheduler().runNextTick((task) -> {
+                        if (ex != null) {
+                            Shared.getDebugAPI().send("Error checking AltDetector register limit: " + ex.getMessage(), true);
+                            ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getAnErrorOccurred());
                             return;
                         }
 
-                        session.setToken(result.getToken());
-                        plugin.getSessions().put(player.getName(), session);
-
-                        plugin.getAuthMeCompatBridge().callRegister(player);
-                        plugin.forceAuthenticate(player);
-
-                        ChatUtil.sendConsoleInfo(player.getName() + " has registered successfully.");
-                        ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getSuccess());
-
-                        if (plugin.getConfigFile().getSettings().getSendAfterAuth().isEnabled()) {
-                            plugin.getFoliaLib().getScheduler().runLater(() -> {
-                                plugin.sendPlayerToServer(player, plugin.getConfigFile().getSettings().getSendAfterAuth().getServer());
-                            }, 20L);
+                        if (!canRegister) {
+                            ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getRegisterLimit());
+                            return;
                         }
-                    } else if (result.getError() == ErrorCode.USERNAME_ALREADY_EXIST) {
-                        ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getAlreadyRegistered());
-                    } else if (result.getError() == ErrorCode.REGISTER_LIMIT) {
-                        ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getRegisterLimit());
-                    } else if (result.getError() == ErrorCode.INVALID_USERNAME) {
-                        ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getInvalidName());
-                    } else if (result.getError() == ErrorCode.INVALID_EMAIL) {
-                        ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getInvalidEmail());
-                    } else if (result.getError() == ErrorCode.EMAIL_ALREADY_EXIST) {
-                        ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getEmailInUse());
-                    } else if (result.getError() == ErrorCode.INVALID_PASSWORD) {
-                        ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getInvalidPassword());
-                    } else {
-                        Shared.getDebugAPI().send("An unexpected error occurred during register: " + result, true);
-                        ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getAnErrorOccurred());
-                    }
+
+                        registerToApi(player, session, password, email, ip);
+                    });
                 });
-            });
+                return;
+            }
+
+            registerToApi(player, session, password, email, ip);
         } catch (Exception e) {
             ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getAnErrorOccurred());
         }
+    }
+
+    private void registerToApi(Player player, GameSessionResponse session, String password, String email, String ip) {
+        String userAgent = UserAgentUtil.generateUserAgent(!plugin.getConfigFile().getSettings().isSession());
+
+        AuthUtil.register(player.getName(), password, email, ip, userAgent).whenComplete((result, ex) -> {
+            plugin.getFoliaLib().getScheduler().runNextTick((task) -> {
+                if (ex != null) {
+                    ex.printStackTrace();
+                    ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getAnErrorOccurred());
+                    return;
+                }
+
+                if (result.isStatus()) {
+                    // Kick the player if email verification is required
+                    if (result.isEmailVerificationRequired() && plugin.getConfigFile().getSettings().getEmailVerification().isKickAfterRegister()) {
+                        player.kickPlayer(String.join("\n",
+                                ChatUtil.replacePlaceholders(plugin.getLangFile().getMessages().getKickEmailNotVerified(),
+                                        new Placeholder("{prefix}", plugin.getLangFile().getMessages().getPrefix()))
+                        ));
+                        return;
+                    }
+
+                    session.setToken(result.getToken());
+                    plugin.getSessions().put(player.getName(), session);
+
+                    plugin.getAuthMeCompatBridge().callRegister(player);
+                    plugin.forceAuthenticate(player);
+
+                    ChatUtil.sendConsoleInfo(player.getName() + " has registered successfully.");
+                    ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getSuccess());
+
+                    if (plugin.getConfigFile().getSettings().getSendAfterAuth().isEnabled()) {
+                        plugin.getFoliaLib().getScheduler().runLater(() -> {
+                            plugin.sendPlayerToServer(player, plugin.getConfigFile().getSettings().getSendAfterAuth().getServer());
+                        }, 20L);
+                    }
+                } else if (result.getError() == ErrorCode.USERNAME_ALREADY_EXIST) {
+                    ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getAlreadyRegistered());
+                } else if (result.getError() == ErrorCode.REGISTER_LIMIT) {
+                    ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getRegisterLimit());
+                } else if (result.getError() == ErrorCode.INVALID_USERNAME) {
+                    ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getInvalidName());
+                } else if (result.getError() == ErrorCode.INVALID_EMAIL) {
+                    ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getInvalidEmail());
+                } else if (result.getError() == ErrorCode.EMAIL_ALREADY_EXIST) {
+                    ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getEmailInUse());
+                } else if (result.getError() == ErrorCode.INVALID_PASSWORD) {
+                    ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getRegister().getInvalidPassword());
+                } else {
+                    Shared.getDebugAPI().send("An unexpected error occurred during register: " + result, true);
+                    ChatUtil.sendMessage(player, plugin.getLangFile().getMessages().getAnErrorOccurred());
+                }
+            });
+        });
     }
 
 }

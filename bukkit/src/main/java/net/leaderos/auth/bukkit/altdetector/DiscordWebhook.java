@@ -1,0 +1,283 @@
+// AltDetectorController - Detects possible alt accounts
+// Copyright 2025
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+package net.leaderos.auth.bukkit.altdetector;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
+public class DiscordWebhook
+{
+    private final AltDetectorController plugin;
+    private final String webhookUrl;
+    private final String username;
+    private final String avatarUrlTemplate;
+    private final int embedColor;
+    private final String embedTitleTemplate;
+    private final String embedDescriptionTemplate;
+    
+    // -------------------------------------------------------------------------
+    
+    // Constructor
+    
+    public DiscordWebhook(AltDetectorController plugin)
+    {
+        this.plugin     = plugin;
+        this.webhookUrl = plugin.config.getDiscordWebhookUrl();
+        this.username   = plugin.config.getDiscordUsername();
+        this.avatarUrlTemplate  = plugin.config.getDiscordAvatarUrl();
+        this.embedColor = plugin.config.getDiscordEmbedColor();
+        this.embedTitleTemplate = plugin.config.getDiscordEmbedTitle();
+        this.embedDescriptionTemplate = plugin.config.getDiscordEmbedDescription();
+    }
+    
+    // -------------------------------------------------------------------------
+    
+    /**
+     * Sends a message about detected alts to Discord
+     * 
+     * @param content The alt detection message (already formatted and without color codes)
+     * @param playerName The Minecraft player name that triggered the alert
+     */
+    public void sendAltMessage(final String content, final String playerName)
+    {
+        // Skip if content is null (no alts found)
+        if (content == null)
+        {
+            return;
+        }
+        
+        // Run async to not block the main thread
+        Bukkit.getScheduler().runTaskAsynchronously(plugin.getMainPlugin(), new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    // Build the JSON payload
+                    Map<String, Object> jsonMap = new HashMap<>();
+                    String authorName = plugin.config.getMCServerName();
+                    String title = applyPlaceholders(embedTitleTemplate, playerName, content, authorName);
+                    String description = applyPlaceholders(embedDescriptionTemplate, playerName, content, authorName);
+                    String avatarUrl = applyPlaceholders(avatarUrlTemplate, playerName, content, authorName);
+                    
+                    // Set username if provided
+                    if (username != null && !username.isEmpty())
+                    {
+                        String resolvedUsername = applyPlaceholders(username, playerName, content, authorName);
+                        jsonMap.put("username", resolvedUsername);
+                    }
+                    
+                    // Set avatar URL if provided
+                    if (avatarUrl != null && !avatarUrl.isEmpty())
+                    {
+                        jsonMap.put("avatar_url", avatarUrl);
+                    }
+
+                    // Create embed
+                    Map<String, Object> embed = new HashMap<>();
+                    embed.put("title", title);
+                    embed.put("description", description);
+                    embed.put("color", embedColor);
+                    
+                    // Add author info
+                    Map<String, Object> author = new HashMap<>();
+                    author.put("name", authorName);
+                    embed.put("author", author);
+
+                    // Add timestamp
+                    embed.put("timestamp", java.time.OffsetDateTime.now().toString());
+                    
+                    // Add embed to payload
+                    jsonMap.put("embeds", new Object[] { embed });
+                    
+                    // Convert to JSON string
+                    String jsonString = mapToJson(jsonMap);
+                    
+                    // Send the webhook
+                    URL url = new URI(webhookUrl).toURL();
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setRequestMethod("POST");
+                    connection.setRequestProperty("Content-Type", "application/json");
+                    connection.setDoOutput(true);
+                    
+                    try (OutputStream outputStream = connection.getOutputStream())
+                    {
+                        byte[] input = jsonString.getBytes(StandardCharsets.UTF_8);
+                        outputStream.write(input, 0, input.length);
+                    }
+                    
+                    int responseCode = connection.getResponseCode();
+                    if (responseCode != 204)
+                    {
+                        plugin.getLogger().warning("Discord webhook returned response code: " + responseCode);
+                    }
+                }
+                catch (IOException | URISyntaxException e)
+                {
+                    plugin.getLogger().warning("Failed to send Discord webhook: " + e.getMessage());
+                }
+            }
+        });
+    }
+    
+    // -------------------------------------------------------------------------
+    
+    /**
+     * Simple method to convert a Map to a JSON string
+     */
+    private String mapToJson(Map<String, Object> map)
+    {
+        StringBuilder json = new StringBuilder("{");
+        boolean first = true;
+        
+        for (Map.Entry<String, Object> entry : map.entrySet())
+        {
+            if (!first)
+            {
+                json.append(",");
+            }
+            first = false;
+            
+            json.append("\"").append(entry.getKey()).append("\":");
+            appendValueAsJson(json, entry.getValue());
+        }
+        
+        json.append("}");
+        return json.toString();
+    }
+    
+    // -------------------------------------------------------------------------
+    
+    /**
+     * Append a value to the JSON string builder
+     */
+    private void appendValueAsJson(StringBuilder json, Object value)
+    {
+        if (value instanceof String)
+        {
+            json.append("\"").append(escapeJsonString((String) value)).append("\"");
+        }
+        else if (value instanceof Number || value instanceof Boolean)
+        {
+            json.append(value);
+        }
+        else if (value instanceof Map)
+        {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> nestedMap = (Map<String, Object>) value;
+            json.append(mapToJson(nestedMap));
+        }
+        else if (value instanceof Object[])
+        {
+            appendArrayAsJson(json, (Object[]) value);
+        }
+        else
+        {
+            json.append("null");
+        }
+    }
+    
+    // -------------------------------------------------------------------------
+    
+    /**
+     * Append an array to the JSON string builder
+     */
+    private void appendArrayAsJson(StringBuilder json, Object[] array)
+    {
+        json.append("[");
+        boolean arrayFirst = true;
+        
+        for (Object item : array)
+        {
+            if (!arrayFirst)
+            {
+                json.append(",");
+            }
+            arrayFirst = false;
+            appendValueAsJson(json, item);
+        }
+        
+        json.append("]");
+    }
+
+    // -------------------------------------------------------------------------
+
+    private String applyPlaceholders(String template,
+                                     String playerName,
+                                     String content,
+                                     String serverName)
+    {
+        String value = (template == null ? "" : template);
+        String creator = (playerName == null ? "" : playerName);
+
+        value = value.replace("{creator}", creator)
+                     .replace("{player}", creator)
+                     .replace("{content}", (content == null ? "" : content))
+                     .replace("{server}", (serverName == null ? "" : serverName));
+
+        Player player = Bukkit.getPlayerExact(creator);
+        if (plugin.placeholderEnabled && player != null)
+        {
+            value = resolvePlaceholderApi(value, player);
+        }
+
+        return value;
+    }
+
+    // -------------------------------------------------------------------------
+
+    private String resolvePlaceholderApi(String text, Player player)
+    {
+        try
+        {
+            Class<?> placeholderApiClass = Class.forName("me.clip.placeholderapi.PlaceholderAPI");
+            Object result = placeholderApiClass.getMethod("setPlaceholders", Player.class, String.class).invoke(null, player, text);
+            if (result instanceof String)
+            {
+                return (String) result;
+            }
+        }
+        catch (Exception ignored)
+        {
+        }
+
+        return text;
+    }
+
+    // -------------------------------------------------------------------------
+
+    private String escapeJsonString(String value)
+    {
+        return value.replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\r", "\\r")
+                    .replace("\n", "\\n")
+                    .replace("\t", "\\t");
+    }
+
+}
